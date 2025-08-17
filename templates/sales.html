@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sales With Alpine.js and Chart.js</title>
+     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.10.3/dist/cdn.min.js"></script>
+     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div x-data="{results: {{ sales }}, chosenYear: null }">
+    <h1>Sales By Year</h1>
+
+    <select x-model="chosenYear" @change="updateChart(Number($event.target.value))">
+        {% for year in years %}
+            <option name="myyear" value="{{year}}">{{ year }}</option>
+        {% endfor %}
+    </select>
+
+    <div>
+      <canvas id="myChart"></canvas>
+    </div>
+   
+    <script>
+      const ctx = document.getElementById('myChart');
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];        
+      const results = {{ sales|safe }};
+      const mapped_names = results.map(r => r['name']);
+      const names = new Set(mapped_names);
+
+      // function to update chart.
+      function updateChart(selectedValue) {
+          let mydata = [];
+          for (const name of names) {
+              let d = {'name': name};
+              d['sales'] = [];
+              for (const month of months) {
+                const sfilter = results.filter(r => r.name === name && r.month === month && r.year === selectedValue);
+                const s = sfilter.map(s => s.sales)[0];
+                d.sales.push(s);
+              };
+              mydata.push(d);
+          };
+          const chart_data = mydata.map(r => {return {label: r.name, data: r.sales, borderWidth: 1};});
+          mychart.data.datasets = chart_data;
+          mychart.update();
+      }  
+      
+      // chart initialization
+      mychart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: []
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+      });
+
+    </script>
+
+    <!-- sales table -->
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">SalesPerson</th>
+                <th scope="col">Month</th>
+                <th scope="col">Year</th>
+                <th scope="col">Sales</th>
+            </tr>
+        </thead>
+        <tbody>
+            <template x-for="result in results.filter(r => r['year'] == chosenYear)">   
+                <tr>
+                    <td x-text="result['name']"></td>
+                    <td x-text="result['month']"></td>
+                    <td x-text="result['year']"></td>
+                    <td x-text="result['sales']"></td>
+                </tr>
+            </template>
+        </tbody>
+    </table>
+</div>
+</body>
